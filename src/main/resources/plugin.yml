@@ -1,0 +1,10 @@
+name: CoolTeleport
+version: '1.0'
+main: io.github.luka3101.coolTeleport.Main
+api-version: '1.21'
+authors: [ Luka Antunović ]
+commands:
+  coolteleport:
+    aliases:
+      - cooltp
+      - ctp
