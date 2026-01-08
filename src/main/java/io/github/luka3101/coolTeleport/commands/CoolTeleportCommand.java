@@ -1,5 +1,6 @@
 package io.github.luka3101.coolTeleport.commands;
 
+import io.github.luka3101.coolTeleport.Main;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -8,60 +9,46 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 public class CoolTeleportCommand implements CommandExecutor {
 
-    private final Map<UUID, Long> cooldown = new HashMap<>();
-    private final long cooldownDuration = 5000;
+    private final Main main;
+
+    public CoolTeleportCommand(Main main) {
+        this.main = main;
+    }
 
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String s, String[] strings) {
-
         // Shows error message if you run this command via console
         if (!(commandSender instanceof Player player)) {
             System.out.println("Only a player can issue this command!");
             return true;
         }
 
-        // Shows error message if the player only runs /coolteleport without providing arguments
-        if (strings.length < 1) {
-            player.sendMessage(ChatColor.RED + "Missing arguments! Usage: /coolteleport <target player>/<x> <y> <z>");
+        // Shows error message if the player provides arguments incorrectly
+        if (strings.length != 1 && strings.length != 3) {
+            player.sendMessage(ChatColor.RED + "Usage: /coolteleport <target player>/<x> <y> <z>");
             return true;
         }
 
-        long currentTime = System.currentTimeMillis();
-
-        // If the player is in cooldown
-        if (cooldown.containsKey(player.getUniqueId())) {
-            long lastUsedTime = cooldown.get(player.getUniqueId());
-            long difference = currentTime - lastUsedTime;
-
-            if (difference < cooldownDuration) {
-                long timeLeft = (cooldownDuration - difference)/1000;
-                player.sendMessage(ChatColor.RED + "You must wait " + timeLeft + " seconds before trying this command again.");
-                return true;
-            }
-        }
-
-        // Player isn't in cooldown, proceed with the command
+        Player target;
+        Location location;
 
         // If player provides a single argument: <target player>
         if (strings.length == 1) {
-            Player target = Bukkit.getPlayerExact(strings[0]);
+            target = Bukkit.getPlayerExact(strings[0]);
             if (target == null) {
                 player.sendMessage(ChatColor.RED + "Couldn't find this player!");
                 return true;
             }
 
-            player.teleport(target.getLocation());
-            player.sendMessage("Teleported you to " + target.getName());
+            location = null;
         }
 
         // If player provides 3 arguments: <x> <y> <z>
-        else if (strings.length == 3) {
+        else {
+            target = null;
+
             double x, y, z;
             try {
                 x = Double.parseDouble(strings[0]);
@@ -72,15 +59,44 @@ public class CoolTeleportCommand implements CommandExecutor {
                 return true;
             }
 
-            player.teleport(new Location(player.getWorld(), x, y, z));
-            player.sendMessage("Teleported you to " + x + ", " + y + ", " + z);
-        } else {
-            player.sendMessage(ChatColor.RED + "Invalid arguments. Usage: /coolteleport <target player>/<x> <y> <z>");
-            return true;
+            location = new Location(player.getWorld(), x, y, z);
         }
 
-        cooldown.put(player.getUniqueId(), currentTime);
+        long teleportDelayTicks = delayAmount(player);
+        if (teleportDelayTicks > 0) {
+            player.sendMessage(ChatColor.YELLOW + "Teleporting in " + teleportDelayTicks / 20 + " seconds...");
+        }
+
+        // Teleport the player
+        Bukkit.getScheduler().runTaskLater(main, () -> {
+            if (!player.isOnline()) return;
+
+            if (target == null) {
+                player.teleport(location);
+            } else {
+                if (!target.isOnline()) {
+                    player.sendMessage(ChatColor.RED + "Couldn't find the player!");
+                    return;
+                }
+                player.teleport(target.getLocation());
+            }
+
+            player.sendMessage(ChatColor.GREEN + "Teleported!");
+
+        }, teleportDelayTicks);
 
         return true;
+    }
+
+    private long delayAmount(Player player) {
+        if (player.hasPermission("coolteleport.delay.instant")) {
+            return 0;
+        }
+
+        if (player.hasPermission("coolteleport.delay.short")) {
+            return main.getConfig().getInt("teleport-delay.short", 2) * 20L;
+        }
+
+        return main.getConfig().getInt("teleport-delay.long", 5) * 20L;
     }
 }

@@ -8,3 +8,13 @@ commands:
     aliases:
       - cooltp
       - ctp
+permissions:
+  coolteleport.delay.instant:
+    description: Allows instant teleport without delay
+    default: op
+  coolteleport.delay.short:
+    description: Allows short teleport delay
+    default: false
+  coolteleport.delay.long:
+    description: Default long teleport delay
+    default: true

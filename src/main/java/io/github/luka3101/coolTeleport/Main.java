@@ -7,7 +7,8 @@ public final class Main extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        getCommand("coolteleport").setExecutor(new CoolTeleportCommand());
+        getCommand("coolteleport").setExecutor(new CoolTeleportCommand(this));
+        saveDefaultConfig();
     }
 
     @Override
